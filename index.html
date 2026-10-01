@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>metrodrone: a tuning and tempo tool</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Courier New', Courier, monospace;
+            user-select: none;
+        }
+
+        body {
+            background-color: #ffffff;
+            color: #000000;
+            padding: 35px 25px;
+            margin: 0 auto;
+            max-width: 680px;
+        }
+
+        h1 {
+            font-size: 15px;
+            font-weight: bold;
+            margin: 0 0 35px 0;
+            letter-spacing: -0.2px;
+        }
+
+        /* --- Layout Grids --- */
+        .section-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 35px;
+        }
+
+        .radio-column {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .radio-item {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        /* Square Radio Toggle Boxes */
+        .radio-box {
+            width: 48px;
+            height: 48px;
+            background-color: #a6a6a6;
+            border: 1px solid #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: bold;
+            margin-top: -1px;
+        }
+
+        .radio-label {
+            margin-left: 14px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        /* Pure Data Active States */
+        .active-green {
+            background-color: #d0f8ce !important;
+        }
+
+        .active-orange {
+            background-color: #ff8500 !important;
+            color: #000;
+        }
+
+        /* Pitch Section */
+        .pitch-container {
+            margin-bottom: 45px;
+        }
+
+        .pitch-title {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .pitch-array {
+            display: flex;
+            flex-wrap: nowrap;
+            width: 100%;
+        }
+
+        .pitch-box {
+            flex: 1;
+            height: 48px;
+            background-color: #a6a6a6;
+            border: 1px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: -1px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        /* Custom Pure Data Sliders */
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .slider-title {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .pd-slider-wrapper {
+            position: relative;
+            width: 145px;
+            height: 48px;
+            background-color: #a6a6a6;
+            border: 1px solid #000;
+            cursor: pointer;
+        }
+
+        .pd-slider-indicator {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            pointer-events: none;
+        }
+
+        .pd-slider-indicator.green { background-color: #d0f8ce; }
+        .pd-slider-indicator.orange { background-color: #ff8500; }
+
+        .tempo-wrapper {
+            width: 100%;
+            height: 48px;
+            background-color: #a6a6a6;
+            border: 1px solid #000;
+            position: relative;
+            cursor: pointer;
+            margin-bottom: 40px;
+        }
+
+        .tempo-ticks {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            font-size: 12px;
+            font-weight: bold;
+            pointer-events: none;
+        }
+
+        .footer {
+            text-align: right;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        /* Audio Engine Unlock Modal */
+        #start-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .start-btn {
+            padding: 15px 30px;
+            font-size: 15px;
+            font-weight: bold;
+            background: #a6a6a6;
+            border: 2px solid #000;
+            cursor: pointer;
+        }
+        .start-btn:hover { background: #d0f8ce; }
+    </style>
+</head>
+<body>
+
+    <div id="start-overlay">
+        <h1>metrodrone: a tuning and tempo tool</h1>
+        <button class="start-btn" id="startBtn">Click to Start Audio Engine</button>
+    </div>
+
+    <h1>metrodrone: a tuning and tempo tool</h1>
+
+    <!-- TOP SECTION: DRONE CONTROLS -->
+    <div class="section-row">
+        <div class="radio-column" id="droneModeCol">
+            <div class="radio-item" data-val="0"><div class="radio-box">m</div><div class="radio-label">minor triad (just)</div></div>
+            <div class="radio-item" data-val="1"><div class="radio-box">M</div><div class="radio-label">major triad (just)</div></div>
+            <div class="radio-item" data-val="2"><div class="radio-box">R</div><div class="radio-label">root</div></div>
+            <div class="radio-item" data-val="3"><div class="radio-box active-green">0</div><div class="radio-label">drone off</div></div>
+        </div>
+
+        <div class="radio-column">
+            <div class="slider-title" style="text-align: center;">octave</div>
+            <div id="octaveCol">
+                <div class="radio-item" data-val="3"><div class="radio-box">3</div></div>
+                <div class="radio-item" data-val="2"><div class="radio-box active-green">2</div></div>
+                <div class="radio-item" data-val="1"><div class="radio-box">1</div></div>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; height: 180px;">
+            <div class="slider-group">
+                <div class="slider-title">drone volume</div>
+                <div class="pd-slider-wrapper" id="droneVolSlider">
+                    <div class="pd-slider-indicator green" id="droneVolInd" style="left: 75%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PITCH SELECTION ARRAY -->
+    <div class="pitch-container">
+        <div class="pitch-title">pitch</div>
+        <div class="pitch-array" id="pitchArray">
+            <div class="pitch-box active-green" data-val="0">C</div>
+            <div class="pitch-box" data-val="1">C#</div>
+            <div class="pitch-box" data-val="2">D</div>
+            <div class="pitch-box" data-val="3">D#</div>
+            <div class="pitch-box" data-val="4">E</div>
+            <div class="pitch-box" data-val="5">F</div>
+            <div class="pitch-box" data-val="6">F#</div>
+            <div class="pitch-box" data-val="7">G</div>
+            <div class="pitch-box" data-val="8">G#</div>
+            <div class="pitch-box" data-val="9">A</div>
+            <div class="pitch-box" data-val="10">A#</div>
+            <div class="pitch-box" data-val="11">B</div>
+        </div>
+    </div>
+
+    <!-- BOTTOM SECTION: METRONOME CONTROLS -->
+    <div class="section-row">
+        <div class="radio-column" id="metroModeCol">
+            <div class="radio-item" data-val="4"><div class="radio-box">4</div><div class="radio-label">sixteenth note drums</div></div>
+            <div class="radio-item" data-val="3"><div class="radio-box">3</div><div class="radio-label">triplet drums</div></div>
+            <div class="radio-item" data-val="2"><div class="radio-box">2</div><div class="radio-label">eighth note drums</div></div>
+            <div class="radio-item" data-val="1"><div class="radio-box">1</div><div class="radio-label">click</div></div>
+            <div class="radio-item" data-val="0"><div class="radio-box active-orange">0</div><div class="radio-label">metronome off</div></div>
+        </div>
+
+        <div class="radio-column">
+            <div class="slider-title" style="text-align: center;">silence</div>
+            <div id="silenceCol">
+                <div class="radio-item" data-val="0"><div class="radio-box active-orange">0%</div></div>
+                <div class="radio-item" data-val="25"><div class="radio-box">25%</div></div>
+                <div class="radio-item" data-val="50"><div class="radio-box">50%</div></div>
+                <div class="radio-item" data-val="75"><div class="radio-box">75%</div></div>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; height: 235px;">
+            <div class="slider-group">
+                <div class="slider-title">metronome volume</div>
+                <div class="pd-slider-wrapper" id="metroVolSlider">
+                    <div class="pd-slider-indicator orange" id="metroVolInd" style="left: 75%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TEMPO SLIDER -->
+    <div class="pitch-title">tempo</div>
+    <div class="tempo-wrapper" id="tempoSlider">
+        <div class="tempo-ticks">
+            <span>50</span><span>100</span><span>150</span><span>200</span><span>250</span><span>300</span>
+        </div>
+        <div class="pd-slider-indicator orange" id="tempoInd" style="left: 20%;"></div>
+    </div>
+
+    <div class="footer">nick syman 2022</div>
+
+    <script>
+        // State variables
+        let state = {
+            pitchIndex: 0,
+            octave: 2,
+            droneMode: 3,
+            droneVol: 0.75,
+            metroMode: 0,
+            silencePct: 0,
+            metroVol: 0.75,
+            tempo: 100
+        };
+
+        let audioCtx = null;
+        let masterGain = null;
+        let droneGainNode = null;
+        let metroGainNode = null;
+
+        let activeDroneOscs = [];
+        let metroTimer = null;
+
+        let quarterBeat = 0;      
+        let subStep = 0;          
+        let isCurrentBeatSilent = false; 
+
+        let noiseBuffer = null;
+
+        const baseNoteFreqs = [
+            130.81, // 0: C
+            138.59, // 1: C#
+            146.83, // 2: D
+            155.56, // 3: D#
+            164.81, // 4: E
+            174.61, // 5: F
+            185.00, // 6: F#
+            196.00, // 7: G
+            207.65, // 8: G#
+            220.00, // 9: A
+            233.08, // 10: A#
+            246.94  // 11: B
+        ];
+
+        const droneRatios = {
+            0: [1.0, 1.2, 1.5],   // minor triad (Just)
+            1: [1.0, 1.25, 1.5],  // major triad (Just)
+            2: [1.0],             // root
+            3: []                 // off
+        };
+
+        // Initialize Audio Engine
+        document.getElementById('startBtn').addEventListener('click', () => {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            const bufferSize = audioCtx.sampleRate;
+            noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 1.0;
+            masterGain.connect(audioCtx.destination);
+
+            droneGainNode = audioCtx.createGain();
+            droneGainNode.gain.value = state.droneVol * 0.3;
+            droneGainNode.connect(masterGain);
+
+            metroGainNode = audioCtx.createGain();
+            metroGainNode.gain.value = state.metroVol;
+            metroGainNode.connect(masterGain);
+
+            document.getElementById('start-overlay').style.display = 'none';
+
+            updateDroneAudio();
+            restartMetronome();
+        });
+
+        // Click-free drone updates with fast crossfade ramps (15ms)
+        function updateDroneAudio() {
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+            const fadeTime = 0.015; // 15 millisecond fade window
+            const targetGain = state.droneVol * 0.3;
+
+            // Fade out current oscillators quickly to eliminate clicks
+            droneGainNode.gain.cancelScheduledValues(now);
+            droneGainNode.gain.setValueAtTime(Math.max(droneGainNode.gain.value, 0.0001), now);
+            droneGainNode.gain.exponentialRampToValueAtTime(0.0001, now + fadeTime);
+
+            setTimeout(() => {
+                activeDroneOscs.forEach(osc => {
+                    try { osc.stop(); osc.disconnect(); } catch(e){}
+                });
+                activeDroneOscs = [];
+
+                if (state.droneMode === 3) return;
+
+                const octaveMult = Math.pow(2, state.octave - 2);
+                const rootFreq = baseNoteFreqs[state.pitchIndex] * octaveMult;
+                const ratios = droneRatios[state.droneMode];
+
+                const resumeTime = audioCtx.currentTime;
+                ratios.forEach(ratio => {
+                    const osc = audioCtx.createOscillator();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(rootFreq * ratio, resumeTime);
+                    osc.connect(droneGainNode);
+                    osc.start(resumeTime);
+                    activeDroneOscs.push(osc);
+                });
+
+                // Fade back in smoothly
+                droneGainNode.gain.cancelScheduledValues(resumeTime);
+                droneGainNode.gain.setValueAtTime(0.0001, resumeTime);
+                droneGainNode.gain.exponentialRampToValueAtTime(Math.max(targetGain, 0.0001), resumeTime + fadeTime);
+            }, fadeTime * 1000);
+        }
+
+        // --- PURE DATA DRUM & CLICK VOICES ---
+
+        function playPdKick(time) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(150, time);
+            osc.frequency.exponentialRampToValueAtTime(32, time + 0.08);
+
+            gain.gain.setValueAtTime(1.0, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
+
+            osc.connect(gain);
+            gain.connect(metroGainNode);
+
+            osc.start(time);
+            osc.stop(time + 0.12);
+        }
+
+        function playPdSnare(time) {
+            const osc = audioCtx.createOscillator();
+            const oscGain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(180, time);
+            osc.frequency.exponentialRampToValueAtTime(80, time + 0.05);
+
+            oscGain.gain.setValueAtTime(0.7, time);
+            oscGain.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
+
+            osc.connect(oscGain);
+            oscGain.connect(metroGainNode);
+
+            osc.start(time);
+            osc.stop(time + 0.06);
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = noiseBuffer;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.setValueAtTime(1200, time);
+
+            const noiseGain = audioCtx.createGain();
+            noiseGain.gain.setValueAtTime(0.8, time);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+
+            noise.connect(filter);
+            filter.connect(noiseGain);
+            noiseGain.connect(metroGainNode);
+
+            noise.start(time);
+            noise.stop(time + 0.1);
+        }
+
+        function playPdCymbal(time) {
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = noiseBuffer;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.setValueAtTime(7000, time);
+
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.35, time);
+            gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.03);
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(metroGainNode);
+
+            noise.start(time);
+            noise.stop(time + 0.03);
+        }
+
+        function playPdClick(time) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1500, time);
+
+            gain.gain.setValueAtTime(1.0, time);
+            gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.015);
+
+            osc.connect(gain);
+            gain.connect(metroGainNode);
+
+            osc.start(time);
+            osc.stop(time + 0.015);
+        }
+
+        function triggerStep() {
+            if (!audioCtx || state.metroMode === 0) return;
+
+            if (subStep === 0) {
+                isCurrentBeatSilent = (Math.random() * 100) < state.silencePct;
+            }
+
+            if (isCurrentBeatSilent) return;
+
+            const now = audioCtx.currentTime;
+
+            if (state.metroMode === 1) {
+                if (subStep === 0) {
+                    playPdClick(now);
+                }
+            } else {
+                playPdCymbal(now);
+
+                if (subStep === 0) {
+                    if (quarterBeat === 0 || quarterBeat === 2) {
+                        playPdKick(now);
+                    } else {
+                        playPdSnare(now);
+                    }
+                }
+            }
+        }
+
+        function restartMetronome() {
+            if (metroTimer) clearInterval(metroTimer);
+            if (state.metroMode === 0) return;
+
+            quarterBeat = 0;
+            subStep = 0;
+            isCurrentBeatSilent = false;
+
+            let subsPerBeat = 1;
+            if (state.metroMode === 2) subsPerBeat = 2; 
+            if (state.metroMode === 3) subsPerBeat = 3; 
+            if (state.metroMode === 4) subsPerBeat = 4; 
+
+            const stepMs = (60 / state.tempo / subsPerBeat) * 1000;
+
+            metroTimer = setInterval(() => {
+                triggerStep();
+
+                subStep++;
+                if (subStep >= subsPerBeat) {
+                    subStep = 0;
+                    quarterBeat = (quarterBeat + 1) % 4;
+                }
+            }, stepMs);
+        }
+
+        // GUI Interactions
+        function setupRadioGroup(containerId, activeClass, callback) {
+            const container = document.getElementById(containerId);
+            const items = container.querySelectorAll('[data-val]');
+            items.forEach(item => {
+                item.addEventListener('click', () => {
+                    items.forEach(i => {
+                        const box = i.querySelector('.radio-box') || i;
+                        box.classList.remove('active-green', 'active-orange');
+                    });
+                    const targetBox = item.querySelector('.radio-box') || item;
+                    targetBox.classList.add(activeClass);
+                    callback(parseInt(item.getAttribute('data-val')));
+                });
+            });
+        }
+
+        setupRadioGroup('droneModeCol', 'active-green', val => { state.droneMode = val; updateDroneAudio(); });
+        setupRadioGroup('octaveCol', 'active-green', val => { state.octave = val; updateDroneAudio(); });
+        setupRadioGroup('pitchArray', 'active-green', val => { state.pitchIndex = val; updateDroneAudio(); });
+
+        setupRadioGroup('metroModeCol', 'active-orange', val => { state.metroMode = val; restartMetronome(); });
+        setupRadioGroup('silenceCol', 'active-orange', val => { state.silencePct = val; });
+
+        function setupPdSlider(sliderId, indicatorId, onChange) {
+            const slider = document.getElementById(sliderId);
+            const indicator = document.getElementById(indicatorId);
+
+            function updateFromMouse(e) {
+                const rect = slider.getBoundingClientRect();
+                let x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+                let pct = x / rect.width;
+                indicator.style.left = `calc(${pct * 100}% - 2px)`;
+                onChange(pct);
+            }
+
+            let isDragging = false;
+            slider.addEventListener('mousedown', e => { isDragging = true; updateFromMouse(e); });
+            window.addEventListener('mousemove', e => { if (isDragging) updateFromMouse(e); });
+            window.addEventListener('mouseup', () => { isDragging = false; });
+        }
+
+        setupPdSlider('droneVolSlider', 'droneVolInd', pct => {
+            state.droneVol = pct;
+            if (droneGainNode && audioCtx) droneGainNode.gain.setValueAtTime(pct * 0.3, audioCtx.currentTime);
+        });
+
+        setupPdSlider('metroVolSlider', 'metroVolInd', pct => {
+            state.metroVol = pct;
+            if (metroGainNode && audioCtx) metroGainNode.gain.setValueAtTime(pct, audioCtx.currentTime);
+        });
+
+        setupPdSlider('tempoSlider', 'tempoInd', pct => {
+            state.tempo = Math.round(50 + pct * 250);
+            restartMetronome();
+        });
+    </script>
+</body>
+</html>
